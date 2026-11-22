@@ -3,10 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Fadeltchatche</title>
+<title>FADELGNEMETCHACHE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FADELGNEMETCHACHE">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-:root{--bg:#fff;--card:#f7f9f9;--tx:#0f1419;--mu:#536471;--ac:#1d9bf0;--bd:#eff3f4;--gold:#f5a623}
+:root{--bg:#000;--card:#16181c;--tx:#e7e9ea;--mu:#71767b;--ac:#1d9bf0;--bd:#2f3336;--gold:#f5a623;color-scheme:dark}
 @media (prefers-color-scheme:dark){:root{--bg:#000;--card:#16181c;--tx:#e7e9ea;--mu:#71767b;--bd:#2f3336;color-scheme:dark}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,sans-serif;font-size:15px}
 .w{max-width:600px;margin:0 auto;min-height:100vh;border-left:1px solid var(--bd);border-right:1px solid var(--bd);padding-bottom:70px}
@@ -45,10 +50,15 @@ async function init(){
  var s=(await SB.auth.getSession()).data.session;
  if(!s){authUI();return}
  me=s.user;await loadProfile()}
-function authUI(m){show('<div class="pad" style="margin-top:8vh"><h1 style="color:var(--ac);font-size:34px;margin:0 0 6px">Fadeltchatche</h1><p class="mu">Connecte-toi ou crée un compte.</p><input id="em" type="email" placeholder="E-mail"><input id="pw" type="password" placeholder="Mot de passe (8 caractères min.)"><p class="err" id="e">'+(m||"")+'</p><div class="row"><button onclick="login()">Se connecter</button><button class="g" onclick="signup()">Créer un compte</button></div></div>')}
-async function login(){var r=await SB.auth.signInWithPassword({email:$("em").value,password:$("pw").value});if(r.error){$("e").textContent=r.error.message;return}me=r.data.user;loadProfile()}
-async function signup(){var r=await SB.auth.signUp({email:$("em").value,password:$("pw").value});if(r.error){$("e").textContent=r.error.message;return}
- if(!r.data.session){authUI("Compte créé. Confirme ton e-mail puis connecte-toi.");return}me=r.data.user;loadProfile()}
+var em="";
+function authUI(m){show('<div class="pad" style="margin-top:8vh"><h1 style="font-size:30px;margin:0 0 10px">FADELGNEMETCHACHE</h1><p class="mu">Connecte-toi avec ton adresse e-mail Gmail. Tu recevras un code de vérification.</p><input id="em" type="email" placeholder="ton.adresse@gmail.com" autocomplete="email"><p class="err" id="e">'+(m||"")+'</p><button onclick="sendCode()">Recevoir le code</button></div>')}
+async function sendCode(){em=$("em").value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(em)){$("e").textContent="Adresse e-mail invalide.";return}
+ var r=await SB.auth.signInWithOtp({email:em,options:{shouldCreateUser:true}});if(r.error){$("e").textContent=r.error.message;return}codeUI()}
+function codeUI(m){show('<div class="pad" style="margin-top:8vh"><h2>Vérification</h2><p class="mu">Un code a été envoyé à '+esc(em)+'. Regarde aussi dans les spams.</p><input id="cd" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Code de vérification"><p class="err" id="e">'+(m||"")+'</p><div class="row"><button onclick="verify()">Valider</button><button class="g" onclick="authUI()">Changer d’e-mail</button></div></div>')}
+async function verify(){var t=$("cd").value.trim();if(!t){$("e").textContent="Entre le code reçu.";return}
+ var r=await SB.auth.verifyOtp({email:em,token:t,type:"email"});if(r.error){$("e").textContent="Code incorrect ou expiré.";return}me=r.data.user;loadProfile()}
+function finishUI(){show('<div class="pad" style="margin-top:8vh"><h2>Finalise ton inscription</h2><input id="nm" placeholder="Nom" maxlength="30"><input id="ps" placeholder="pseudo (lettres, chiffres, _)" maxlength="15"><p class="err" id="e"></p><button onclick="finish()">Terminer</button></div>')}
+async function finish(){var r=await SB.rpc("creer_profil",{p_pseudo:$("ps").value.trim(),p_nom:$("nm").value.trim()});if(r.error){$("e").textContent=r.error.message.indexOf("profiles_pseudo")>=0?"Ce pseudo est déjà pris.":r.error.message;return}loadProfile()}
 async function loadProfile(){var r=await SB.from("profiles").select("*").eq("id",me.id).maybeSingle();prof=r.data;if(!prof){finishUI();return}await loadPosts();render()}
 function finishUI(){show('<div class="pad" style="margin-top:8vh"><h2>Dernière étape</h2><input id="nm" placeholder="Nom" maxlength="30"><input id="ps" placeholder="pseudo (lettres, chiffres, _)" maxlength="15"><p class="err" id="e"></p><button onclick="finish()">Valider</button></div>')}
 async function finish(){var r=await SB.rpc("creer_profil",{p_pseudo:$("ps").value.trim(),p_nom:$("nm").value.trim(),p_code:""});if(r.error){$("e").textContent=r.error.message;return}loadProfile()}
@@ -72,6 +82,7 @@ function render(){var b;
  else if(view==="profile")b='<div class="hd">Profil<button class="g" onclick="out()">Déconnexion</button></div><div class="pad"><b style="font-size:20px">'+esc(prof.nom)+'</b>'+(prof.premium?' <span class="gd">✔</span>':'')+'<div class="mu">@'+esc(prof.pseudo)+'</div></div>'+posts.filter(function(p){return p.user_id===me.id}).map(card).join("");
  else b='<div class="hd">Accueil<button class="g" onclick="loadPosts().then(render)">↻</button></div><div class="post"><div class="av">'+esc(prof.nom[0])+'</div><div class="bd"><textarea id="tx" rows="2" placeholder="Quoi de neuf ?" oninput="cnt()"></textarea><div class="row"><span class="mu" id="ct">0/'+lim()+'</span><button onclick="post()">Poster</button></div><div class="err" id="pe"></div></div></div>'+(posts.map(card).join("")||'<p class="pad mu">Aucun tchat pour l’instant.</p>');
  show(b+'<div class="bar"><a onclick="nav(\'home\')">🏠 Accueil</a><a onclick="nav(\'plans\')">⭐ Premium</a><a onclick="nav(\'profile\')">👤 Profil</a></div>')}
+try{if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js")}catch(e){}
 init();
 </script>
 </body>
