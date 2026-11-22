@@ -50,8 +50,8 @@ async function login(){var r=await SB.auth.signInWithPassword({email:$("em").val
 async function signup(){var r=await SB.auth.signUp({email:$("em").value,password:$("pw").value});if(r.error){$("e").textContent=r.error.message;return}
  if(!r.data.session){authUI("Compte créé. Confirme ton e-mail puis connecte-toi.");return}me=r.data.user;loadProfile()}
 async function loadProfile(){var r=await SB.from("profiles").select("*").eq("id",me.id).maybeSingle();prof=r.data;if(!prof){finishUI();return}await loadPosts();render()}
-function finishUI(){show('<div class="pad" style="margin-top:8vh"><h2>Dernière étape</h2><input id="nm" placeholder="Nom" maxlength="30"><input id="ps" placeholder="pseudo (lettres, chiffres, _)" maxlength="15"><input id="cd" type="password" placeholder="Code d’accès" autocomplete="off"><p class="err" id="e"></p><button onclick="finish()">Valider</button></div>')}
-async function finish(){var r=await SB.rpc("creer_profil",{p_pseudo:$("ps").value.trim(),p_nom:$("nm").value.trim(),p_code:$("cd").value});if(r.error){$("e").textContent=r.error.message;return}loadProfile()}
+function finishUI(){show('<div class="pad" style="margin-top:8vh"><h2>Dernière étape</h2><input id="nm" placeholder="Nom" maxlength="30"><input id="ps" placeholder="pseudo (lettres, chiffres, _)" maxlength="15"><p class="err" id="e"></p><button onclick="finish()">Valider</button></div>')}
+async function finish(){var r=await SB.rpc("creer_profil",{p_pseudo:$("ps").value.trim(),p_nom:$("nm").value.trim(),p_code:""});if(r.error){$("e").textContent=r.error.message;return}loadProfile()}
 async function loadPosts(){var r=await SB.from("posts").select("id,texte,created_at,user_id,profiles(pseudo,nom,premium),likes(user_id),comments(id,texte,profiles(pseudo,nom))").order("created_at",{ascending:false}).limit(50);posts=r.data||[]}
 function card(p){var u=p.profiles||{nom:"?",pseudo:"?"},lk=p.likes.some(function(l){return l.user_id===me.id});
  return '<div class="post"><div class="av">'+esc(u.nom[0])+'</div><div class="bd"><div><b>'+esc(u.nom)+'</b>'+(u.premium?' <span class="gd">✔</span>':'')+' <span class="mu">@'+esc(u.pseudo)+' · '+ago(p.created_at)+'</span></div><div style="white-space:pre-wrap;word-break:break-word">'+fmt(p.texte)+'</div>'
@@ -76,6 +76,3 @@ init();
 </script>
 </body>
 </html>
-
-
-
